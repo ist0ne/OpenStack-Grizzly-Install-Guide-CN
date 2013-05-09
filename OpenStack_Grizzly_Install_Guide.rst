@@ -2,7 +2,6 @@
   OpenStack Grizzly 安装指南
 ==========================================================
 
-
 :Version: 1.0
 :Source: https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide
 :Keywords: 单节点OpenStack安装, Grizzly, Quantum, Nova, Keystone, Glance, Horizon, Cinder, LinuxBridge, KVM, Ubuntu Server 12.04 (64 bits).
@@ -27,7 +26,6 @@
   7. 设置Cinder
   8. 设置Horizon
   9. 你的第一个VM
-  10. 
 
 0. 简介
 ==============
@@ -719,6 +717,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 ================
 
 网络拓扑如下：
+
 .. image:: http://i.imgur.com/800pvWd.png
 
 9.1. 为admin租户创建内网、外网、路由器和虚拟机
@@ -726,7 +725,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 设置环境变量::
 
-   cat creds-admin
+   # cat creds-admin
 
    export OS_TENANT_NAME=admin
    export OS_USERNAME=admin
@@ -735,11 +734,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 使环境变量生效::
 
-   source creds-admin
+   # source creds-admin
 
 * 列出已创建的用户::
 
-   keystone user-list
+   # keystone user-list
 
    +----------------------------------+---------+---------+------------------+
    |                id                |   name  | enabled |      email       |
@@ -753,7 +752,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 列出已创建的租户::
 
-   keystone tenant-list
+   # keystone tenant-list
 
    +----------------------------------+---------+---------+
    |                id                |   name  | enabled |
@@ -764,7 +763,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为admin租户创建网络::
 
-   quantum net-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 net_admin
+   # quantum net-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 net_admin
 
    Created a new network:
    +---------------------------+--------------------------------------+
@@ -785,7 +784,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 # 为admin租户创建子网::
 
-   quantum subnet-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 net_admin 172.16.100.0/24
+   # quantum subnet-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 net_admin 172.16.100.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -806,7 +805,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为admin租户创建路由器::
 
-   quantum router-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 router_admin
+   # quantum router-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 router_admin
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -822,7 +821,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 列出路由代理类型::
 
-   quantum agent-list
+   # quantum agent-list
 
    +--------------------------------------+--------------------+-----------+-------+----------------+
    | id                                   | agent_type         | host      | alive | admin_state_up |
@@ -834,18 +833,19 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 将router_admin设置为L3代理类型::
 
-   quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_admin
+   # quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_admin
 
    Added router router_admin to L3 agent
 
 * 将net_admin子网与router_admin路由关联::
 
-   quantum router-interface-add 76d8ac10-a6df-4dfa-b691-297da374c811 fb141492-8aa1-437b-8192-315e19e7f4d2
+   # quantum router-interface-add 76d8ac10-a6df-4dfa-b691-297da374c811 fb141492-8aa1-437b-8192-315e19e7f4d2
+
    Added interface to router 76d8ac10-a6df-4dfa-b691-297da374c811
 
 * 创建外网net_external，注意设置--router:external=True::
 
-   quantum net-create net_external --router:external=True --shared
+   # quantum net-create net_external --router:external=True --shared
 
    Created a new network:
    +---------------------------+--------------------------------------+
@@ -866,7 +866,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为net_external创建子网，注意设置的gateway必须在给到的网段内::
 
-   quantum subnet-create net_external --gateway 192.168.100.1 192.168.100.0/24 --enable_dhcp=False
+   # quantum subnet-create net_external --gateway 192.168.100.1 192.168.100.0/24 --enable_dhcp=False
 
    Created a new subnet:
    +------------------+------------------------------------------------------+
@@ -887,13 +887,13 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 将net_external与router_admin路由器关联::
 
-   quantum router-gateway-set router_admin net_external
+   # quantum router-gateway-set router_admin net_external
 
    Set gateway for router router_admin
 
 * 创建floating ip::
 
-   quantum floatingip-create net_external
+   # quantum floatingip-create net_external
 
    Created a new floatingip:
    +---------------------+--------------------------------------+
@@ -908,7 +908,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | tenant_id           | 8c0104041b034df3a79c17a9517dd3f9     |
    +---------------------+--------------------------------------+
 
-   quantum floatingip-create net_external
+   # quantum floatingip-create net_external
 
    Created a new floatingip:
    +---------------------+--------------------------------------+
@@ -925,7 +925,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为admin租户创建虚拟机并关联floating ip(可通过web界面创建虚拟机并关联floating ip)::
 
-   nova list
+   # nova list
 
    +--------------------------------------+-----------------+--------+---------------------------------------+
    | ID                                   | Name            | Status | Networks                              |
@@ -939,7 +939,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 创建leju.com租户::
 
-   keystone tenant-create --name leju.com
+   # keystone tenant-create --name leju.com
+
    +-------------+----------------------------------+
    |   Property  |              Value               |
    +-------------+----------------------------------+
@@ -951,7 +952,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 在leju.com租户中创建dongliang用户::
 
-   keystone user-create --name=dongliang --pass=123456 --tenant-id=5585ffbad86d495d88b5f95729b1dc60 --email=dongliang@leju.com
+   # keystone user-create --name=dongliang --pass=123456 --tenant-id=5585ffbad86d495d88b5f95729b1dc60 --email=dongliang@leju.com
 
    +----------+----------------------------------+
    | Property |              Value               |
@@ -965,7 +966,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 列出预定义的角色::
 
-   keystone role-list
+   # keystone role-list
 
    +----------------------------------+----------------------+
    |                id                |         name         |
@@ -979,11 +980,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为用户dongliang添加角色::
 
-   keystone user-role-add --tenant-id 5585ffbad86d495d88b5f95729b1dc60 --user-id 21efde97763147718fee478634cd3e70 --role-id 47eda7948e5d430bad3ce937fb00dc3b
+   # keystone user-role-add --tenant-id 5585ffbad86d495d88b5f95729b1dc60 --user-id 21efde97763147718fee478634cd3e70 --role-id 47eda7948e5d430bad3ce937fb00dc3b
 
 * 为leju.com租户创建网络::
 
-   quantum net-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com
+   # quantum net-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com
 
    Created a new network:
    +---------------------------+--------------------------------------+
@@ -1004,7 +1005,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为leju.com租户创建子网::
 
-   quantum subnet-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com 172.16.200.0/24
+   # quantum subnet-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com 172.16.200.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -1025,7 +1026,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为leju.com租户创建路由器::
 
-   quantum router-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 router_leju_com
+   # quantum router-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 router_leju_com
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -1053,25 +1054,25 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 设置路由器使用L3代理::
 
-   quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_leju_com
+   # quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_leju_com
 
    Added router router_leju_com to L3 agent
 
 * 连接net_leju_com到router_leju_com::
 
-   quantum router-interface-add 451a6166-d082-4f02-8f37-07703a8118ab dbb59749-8f05-474d-b26d-745254a22669
+   # quantum router-interface-add 451a6166-d082-4f02-8f37-07703a8118ab dbb59749-8f05-474d-b26d-745254a22669
 
    Added interface to router 451a6166-d082-4f02-8f37-07703a8118ab
 
 * 设置net_leju_com外网网关::
 
-   quantum router-gateway-set 451a6166-d082-4f02-8f37-07703a8118ab net_external
+   # quantum router-gateway-set 451a6166-d082-4f02-8f37-07703a8118ab net_external
 
    Set gateway for router 451a6166-d082-4f02-8f37-07703a8118ab
 
 * 设置leju.com租户环境变量::
 
-   cat creds-dongliang
+   # cat creds-dongliang
 
    export OS_TENANT_NAME=leju.com
    export OS_USERNAME=dongliang
