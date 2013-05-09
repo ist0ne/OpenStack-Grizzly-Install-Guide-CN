@@ -3,7 +3,7 @@
 ==========================================================
 
 :Version: 1.0
-:Source: https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide
+:Source: https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN
 :Keywords: 单节点OpenStack安装, Grizzly, Quantum, Nova, Keystone, Glance, Horizon, Cinder, LinuxBridge, KVM, Ubuntu Server 12.04 (64 bits).
 
 作者
