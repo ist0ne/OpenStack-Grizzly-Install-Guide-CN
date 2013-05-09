@@ -1,10 +1,9 @@
-OpenStack-Grizzly-Install-Guide
+OpenStack Grizzly安装指南
 ===============================
 
-You want to install OpenStack Grizzly and you don't know how ?
-This is what you are looking for !
+你想安装OpenStack Grizzly但是不知道如何开始，你可以看看本指南！
 
-It's easy, simple and tested. Can't wait? Go check it out by yourself: 
+他容易、简单且经过了测试。还等什么？试试吧: 
 
 Guide Branch  | Single/Multi Node | Quantum plugin  | Direct Guide Link                                                                                              |
 ------------- | ----------------- | --------------- | ------------------                                                                                             |
