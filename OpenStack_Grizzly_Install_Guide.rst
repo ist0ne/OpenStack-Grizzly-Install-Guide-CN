@@ -12,9 +12,7 @@
 `Shi Dongliang <http://stone.so>`_ <istone2008@gmail.com>
 
 本指南fork自
-
 `Bilel Msekni <https://github.com/mseknibilel/OpenStack-Grizzly-Install-Guide>`_ 
-
 的git仓库。向第一作者致敬！
 
 内容列表
@@ -255,6 +253,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    glance image-create --name cirros --is-public true --container-format bare --disk-format qcow2 --location https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img
 
    注意：通过此镜像创建的虚拟机可通过用户名/密码登陆， 用户名：cirros 密码：cubswin:)
+
+* 本地创建Ubuntu云镜像::
+
+   wget http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img
+   glance add name="Ubuntu 12.04 cloudimg amd64" is_public=true container_format=ovf disk_format=qcow2 < ./precise-server-cloudimg-amd64-disk1.img
 
 * 列出镜像检查是否上传成功::
 
@@ -931,6 +934,34 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为admin租户创建虚拟机并关联floating ip(可通过web界面创建虚拟机并关联floating ip)::
 
+   注意：如下生成秘钥对，并上传ssh公钥：
+   # ssh-keygen
+   Generating public/private rsa key pair.
+   Enter file in which to save the key (/root/.ssh/id_rsa):
+   Created directory '/root/.ssh'.
+   Enter passphrase (empty for no passphrase):
+   Enter same passphrase again:
+   Your identification has been saved in /root/.ssh/id_rsa.
+   Your public key has been saved in /root/.ssh/id_rsa.pub.
+   The key fingerprint is:
+   ab:dc:48:ae:a6:12:d5:8b:db:cf:7c:31:c1:4a:03:39 root@grizzly
+   The key's randomart image is:
+   +--[ RSA 2048]----+
+   |     .           |
+   |    E            |
+   |   . o .         |
+   |  . . o o        |
+   | . . o oS.       |
+   |. . . . o.       |
+   | . o  . .o       |
+   |. . o* +.        |
+   | ..o.oO..        |
+   +-----------------+
+
+   # nova keypair-add --pub_key /root/.ssh/id_rsa.pub nova-key
+
+   上传公钥后便可以通过 ssh -i /root/.ssh/id_rsa cirros@192.168.100.3 登陆cirros虚拟机。
+
    # nova list
 
    +--------------------------------------+-----------------+--------+---------------------------------------+
@@ -939,6 +970,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | fb4c93a0-fc83-4779-b85f-d7326c238c94 | ubuntu.vm.admin | ACTIVE | net_admin=172.16.100.4, 192.168.100.4 |
    | 5b918d39-1ac9-4a76-83d5-8b32a29ed3fe | vm.admin        | ACTIVE | net_admin=172.16.100.3, 192.168.100.3 |
    +--------------------------------------+-----------------+--------+---------------------------------------+
+
 
 9.1. 创建leju.com租户、内网、路由器和虚拟机并关联外网
 ------------------
