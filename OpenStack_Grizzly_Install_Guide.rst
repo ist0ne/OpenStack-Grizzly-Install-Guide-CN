@@ -11,6 +11,8 @@
 
 `Shi Dongliang <http://stone.so>`_ <istone2008@gmail.com>
 
+本指南fork自`Bilel Msekni <https://github.com/mseknibilel/OpenStack-Grizzly-Install-Guide>`_ 的git仓库。向第一作者致敬！
+
 内容列表
 =================
 
