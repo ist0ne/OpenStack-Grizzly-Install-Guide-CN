@@ -525,6 +525,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    apt-get install -y nova-api nova-cert novnc nova-consoleauth nova-scheduler nova-novncproxy nova-doc nova-conductor nova-compute-kvm
 
+   注意：如果你的宿主机不支持kvm虚拟化，可把nova-compute-kvm换成nova-compute-qemu
+   同时/etc/nova/nova-compute.conf配置文件中的libvirt_type=qemu
+
 * 检查nova服务是否正常启动::
 
    cd /etc/init.d/; for i in $( ls nova-* ); do service $i status; cd; done
