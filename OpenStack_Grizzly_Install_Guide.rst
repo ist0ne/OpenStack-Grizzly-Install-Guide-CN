@@ -307,6 +307,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 添加网桥 br-ex 并把网卡 eth1 加入 br-ex::
 
+   ovs-vsctl  add-br br-ex
    ovs-vsctl add-port br-ex eth1
 
 * 如下编辑/etc/network/interfaces::
@@ -796,7 +797,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 # 为admin租户创建子网::
 
-   # quantum subnet-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 net_admin 172.16.100.0/24
+   # quantum subnet-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 net_admin 172.16.100.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -817,7 +818,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为admin租户创建路由器::
 
-   # quantum router-create --tenant-id=8c0104041b034df3a79c17a9517dd3f9 router_admin
+   # quantum router-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 router_admin
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -1025,7 +1026,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为leju.com租户创建网络::
 
-   # quantum net-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com
+   # quantum net-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 net_leju_com
 
    Created a new network:
    +---------------------------+--------------------------------------+
@@ -1046,7 +1047,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为leju.com租户创建子网::
 
-   # quantum subnet-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 net_leju_com 172.16.200.0/24
+   # quantum subnet-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 net_leju_com 172.16.200.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -1067,7 +1068,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 为leju.com租户创建路由器::
 
-   # quantum router-create --tenant-id=5585ffbad86d495d88b5f95729b1dc60 router_leju_com
+   # quantum router-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 router_leju_com
 
    Created a new router:
    +-----------------------+--------------------------------------+
