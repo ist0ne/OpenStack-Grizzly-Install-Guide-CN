@@ -146,7 +146,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    service keystone restart
    keystone-manage db_sync
 
-* 使用git仓库中脚本填充keystone数据库： `脚本文件夹 <https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide/tree/OVS_SingleNode/KeystoneScripts>`_ ::
+* 使用git仓库中脚本填充keystone数据库： `脚本文件夹 <https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/tree/OVS_SingleNode/KeystoneScripts>`_ ::
 
    #注意在执行脚本前请按你的网卡配置修改HOST_IP和HOST_IP_EXT
 
@@ -700,7 +700,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    pvcreate /dev/loop2
    vgcreate cinder-volumes /dev/loop2
 
-**注意:** 重启后卷组不会自动挂载 (点击`这个 <https://github.com/mseknibilel/OpenStack-Folsom-Install-guide/blob/master/Tricks%26Ideas/load_volume_group_after_system_reboot.rst>`_ 设置在重启后自动挂载) 
+**注意:** 重启后卷组不会自动挂载 (点击
+`这个 <https://github.com/mseknibilel/OpenStack-Folsom-Install-guide/blob/master/Tricks%26Ideas/load_volume_group_after_system_reboot.rst>`_
+设置在重启后自动挂载) 
 重启cinder服务::
 
    cd /etc/init.d/; for i in $( ls cinder-* ); do sudo service $i restart; done
