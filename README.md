@@ -5,6 +5,8 @@ OpenStack Grizzly安装指南
 
 他容易、简单且经过了测试。还等什么？试试吧: 
 
+![ScreenShot](http://i.imgur.com/WdRDVZJ.png)
+
 Guide Branch  | Single/Multi Node | Quantum plugin  | Direct Guide Link                                                                                                                  |
 ------------- | ----------------- | --------------- | ------------------                                                                                                                 |
 master        | Single            | Linux Bridge    | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/master/OpenStack_Grizzly_Install_Guide.rst                      |
