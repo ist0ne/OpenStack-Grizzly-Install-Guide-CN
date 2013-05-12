@@ -21,15 +21,13 @@
 ::
 
   0. 简介
-  1. 测试环境
-  2. 准备宿主机
-  3. 设置Keystone
-  4. 设置Glance
-  5. 设置Quantum
-  6. 设置Nova
-  7. 设置Cinder
-  8. 设置Horizon
-  9. 你的第一个VM
+  1. 环境搭建
+  2. 控制节点
+  3. 网络节点
+  4. 计算节点
+  5. OpenStack使用
+  6. 参考文档
+
 
 0. 简介
 ==============
@@ -39,7 +37,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 状态: Stable
 
 
-1. 测试环境
+1. 环境搭建
 ====================
 
 :节点角色: NICs
@@ -1114,7 +1112,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    nova-manage service list
 
-5. 创建虚拟机
+5. OpenStack使用
 ================
 
 网络拓扑如下：
@@ -1558,6 +1556,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    Associated floatingip 2efa6e49-9d99-4402-9a61-85c235d0ccb8
 
+6. 参考文档
+================
 
+`Boostrapping Open vSwitch and Quantum <https://a248.e.akamai.net/cdn.hpcloudsvc.com/h9f25be84b35c201beea6b13c85876258/prodaw2/Bootstrapping_OVS_Quantum--final_20130319.html>`_
+
+`Cisco OpenStack Edition: Folsom Manual Install <http://docwiki.cisco.com/wiki/Cisco_OpenStack_Edition:_Folsom_Manual_Install>`_
 
 
