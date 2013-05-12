@@ -51,7 +51,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 **注意3:** 这个是当前网络架构
 
-.. image:: http://i.imgur.com/58Dr48n.jpg
+.. image:: http://i.imgur.com/JyMokiY.jpg
 
 2. 准备节点
 ===============
@@ -150,8 +150,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    #注意在执行脚本前请按你的网卡配置修改HOST_IP和HOST_IP_EXT
 
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide/master/KeystoneScripts/keystone_basic.sh
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide/master/KeystoneScripts/keystone_endpoints_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/master/KeystoneScripts/keystone_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/master/KeystoneScripts/keystone_endpoints_basic.sh
 
    chmod +x keystone_basic.sh
    chmod +x keystone_endpoints_basic.sh
@@ -266,114 +266,13 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 5. 设置Quantum
 =============
 
-5.1. OpenVSwitch
-------------
-
-* 安装OpenVSwitch软件包::
-
-   apt-get install openvswitch-controller openvswitch-switch openvswitch-brcompat
-
-* 修改openvswitch-switch配置文件::
-
-   sed -i 's/# BRCOMPAT=no/BRCOMPAT=yes/g' /etc/default/openvswitch-switch
-
-* 重启openvswitch-switch（注意ovs-brcompatd是否启动，如果未启动需要强制加载）::
-
-   /etc/init.d/openvswitch-switch restart
-
-* 强制加载brcompat内核模块::
-
-   /etc/init.d/openvswitch-switch force-reload-kmod
-
-* 查看ovs-brcompatd、ovs-vswitchd、ovsdb-server是否均已启动::
-
-   /etc/init.d/openvswitch-switch restart
-
-* 查看brcompat内核模块已挂载::
-
-   lsmod | grep brcompat
-
-   brcompat               13513  0
-   openvswitch            84124  1 brcompat
-
-* 如果还是有问题执行下面步骤，直到ovs-brcompatd、ovs-vswitchd、ovsdb-server都启动::
-
-   root@openstack:~# apt-get install openvswitch-datapath-source
-   root@openstack:~# module-assistant auto-install openvswitch-datapath
-   root@openstack:~# /etc/init.d/openvswitch-switch force-reload-kmod
-   root@openstack:~# /etc/init.d/openvswitch-switch restart
-
-   文档参考：http://blog.scottlowe.org/2012/08/17/installing-kvm-and-open-vswitch-on-ubuntu/
-
-* 添加网桥 br-ex 并把网卡 eth1 加入 br-ex::
-
-   ovs-vsctl  add-br br-ex
-   ovs-vsctl add-port br-ex eth1
-
-* 如下编辑/etc/network/interfaces::
-
-   # This file describes the network interfaces available on your system
-   # and how to activate them. For more information, see interfaces(5).
-
-   # The loopback network interface
-   auto lo
-   iface lo inet loopback
-
-   # The primary network interface
-   auto eth0
-   iface eth0 inet static
-   # This is an autoconfigured IPv6 interface
-   # iface eth0 inet6 auto
-   address 10.10.100.51
-   netmask 255.255.255.0
-
-   # For Exposing OpenStack API over the internet
-   auto eth1
-   iface eth1 inet manual
-   up ifconfig $IFACE 0.0.0.0 up
-   down ifconfig $IFACE down
-
-   auto br-ex
-   iface br-ex inet static
-   address 192.168.100.51
-   netmask 255.255.255.0
-   gateway 192.168.100.1
-   dns-nameservers 8.8.8.8
-
-* 重启网络服务::
-
-   /etc/init.d/networking restart
-
-* 创建内网网桥br-int::
-
-   ovs-vsctl add-br br-int
-
-* 查看网桥配置::
-
-   ovs-vsctl list-br
-
-   br-ex
-   br-int
-   root@openstack:~# ovs-vsctl show
-   b7e9e54f-d5d8-462e-bdf8-3565a4628cf3
-       Bridge br-int
-           Port br-int
-               Interface br-int
-                   type: internal
-       Bridge br-ex
-           Port "eth1"
-               Interface "eth1"
-           Port br-ex
-               Interface br-ex
-                   type: internal
-       ovs_version: "1.4.0+build0"
-
 5.2. Quantum-*
 ------------
 
 * 安装Quantum组件::
 
-   apt-get install -y quantum-server quantum-plugin-openvswitch quantum-plugin-openvswitch-agent dnsmasq quantum-dhcp-agent quantum-l3-agent quantum-plugin-openvswitch-agent
+   apt-get install -y quantum-server quantum-plugin-linuxbridge quantum-plugin-linuxbridge-agent dnsmasq quantum-dhcp-agent quantum-l3-agent 
+
 
 * 创建数据库::
 
@@ -397,20 +296,15 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    admin_user = quantum
    admin_password = service_pass
 
-* 编辑OVS配置文件/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini:: 
+* 编辑OVS配置文件/etc/quantum/plugins/linuxbridge/linuxbridge_conf.ini:: 
 
-   #Under the database section
-   [DATABASE]
+   # under [DATABASE] section  
    sql_connection = mysql://quantumUser:quantumPass@10.10.100.51/quantum
-
-   #Under the OVS section
-   [OVS]
-   tenant_network_type = gre
-   tunnel_id_ranges = 1:1000
-   integration_bridge = br-int
-   tunnel_bridge = br-tun
-   local_ip = 10.10.100.51
-   enable_tunneling = True
+   # under [LINUX_BRIDGE] section
+   physical_interface_mappings = physnet1:eth1
+   # under [VLANS] section
+   tenant_network_type = vlan
+   network_vlan_ranges = physnet1:1000:2999
 
 * 更新/etc/quantum/metadata_agent.ini::
 
@@ -431,6 +325,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 编辑/etc/quantum/quantum.conf::
 
+   core_plugin = quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2
+
    [keystone_authtoken]
    auth_host = 10.10.100.51
    auth_port = 35357
@@ -443,7 +339,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 * 编辑/etc/quantum/l3_agent.ini::
 
    [DEFAULT]
-   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
+   interface_driver = quantum.agent.linux.interface.BridgeInterfaceDriver
    use_namespaces = True
    external_network_bridge = br-ex
    signing_dir = /var/cache/quantum
@@ -453,12 +349,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    auth_url = http://10.10.100.51:35357/v2.0
    l3_agent_manager = quantum.agent.l3_agent.L3NATAgentWithStateReport
    root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
-   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
 
 * 编辑/etc/quantum/dhcp_agent.ini::
 
    [DEFAULT]
-   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
+   interface_driver = quantum.agent.linux.interface.BridgeInterfaceDriver
    dhcp_driver = quantum.agent.linux.dhcp.Dnsmasq
    use_namespaces = True
    signing_dir = /var/cache/quantum
@@ -500,6 +395,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
    "/dev/rtc", "/dev/hpet","/dev/net/tun"
    ]
+
+* 删除默认的虚拟网桥 ::
+
+   virsh net-destroy default
+   virsh net-undefine default
 
 * 更新/etc/libvirt/libvirtd.conf配置文件::
 
@@ -731,7 +631,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 网络拓扑如下：
 
-.. image:: http://i.imgur.com/800pvWd.png
+.. image:: http://i.imgur.com/WdRDVZJ.png
 
 9.1. 为admin租户创建内网、外网、路由器和虚拟机
 ------------------
