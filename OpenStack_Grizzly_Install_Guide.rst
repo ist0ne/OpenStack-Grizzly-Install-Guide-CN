@@ -167,8 +167,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    #注意在执行脚本前请按你的网卡配置修改HOST_IP和HOST_IP_EXT
 
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MultiNode/KeystoneScripts/keystone_basic.sh
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MultiNode/KeystoneScripts/keystone_endpoints_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MutliNode/KeystoneScripts/keystone_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MutliNode/KeystoneScripts/keystone_endpoints_basic.sh
 
    chmod +x keystone_basic.sh
    chmod +x keystone_endpoints_basic.sh
