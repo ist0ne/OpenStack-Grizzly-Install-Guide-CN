@@ -731,7 +731,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 网络拓扑如下：
 
-.. image:: http://i.imgur.com/800pvWd.png
+.. image:: http://i.imgur.com/WdRDVZJ.png
 
 9.1. 为admin租户创建内网、外网、路由器和虚拟机
 ------------------
