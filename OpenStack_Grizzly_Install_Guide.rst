@@ -95,6 +95,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    service networking restart
 
+* 开启路由转发
+
+   sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+   sysctl -p
+
 2.3. 安装MySQL
 ------------
 
@@ -316,7 +321,6 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 * 重启quantum所有服务::
 
    cd /etc/init.d/; for i in $( ls quantum-* ); do sudo service $i restart; done
-   service dnsmasq restart
 
 2.9. 设置Nova
 ------------------
@@ -475,7 +479,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    vgcreate cinder-volumes /dev/loop2
 
 **注意:** 重启后卷组不会自动挂载 (点击`这个 <https://github.com/mseknibilel/OpenStack-Folsom-Install-guide/blob/master/Tricks%26Ideas/load_volume_group_after_system_reboot.rst>`_ 设置在重启后自动挂载) 
-重启cinder服务::
+
+* 重启cinder服务::
 
    cd /etc/init.d/; for i in $( ls cinder-* ); do sudo service $i restart; done
 
@@ -488,7 +493,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 如下安装horizon ::
 
-   apt-get install openstack-dashboard memcached
+   apt-get install -y openstack-dashboard memcached
 
 * 如果你不喜欢OpenStack ubuntu主题, 你可以停用它::
 
@@ -559,6 +564,12 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    address 192.168.100.52
    netmask 255.255.255.0
 
+* 开启路由转发
+
+   sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+   sysctl -p
+
+
 3.3. OpenVSwitch
 ------------
 
@@ -606,7 +617,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 * 添加网桥 br-ex 并把网卡 eth1 加入 br-ex::
 
    ovs-vsctl  add-br br-ex
-   ovs-vsctl add-port br-ex eth1
+   ovs-vsctl add-port br-ex eth2
 
 * 如下编辑/etc/network/interfaces::
 
@@ -659,55 +670,16 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    root@openstack-network:~# ovs-vsctl list-br
    br-ex
    br-int
-   br-tun
 
    root@openstack-network:~# ovs-vsctl show
    ebea0b50-e450-41ea-babb-a094ca8d69fa
        Bridge br-int
-           Port patch-tun
-               Interface patch-tun
-                   type: patch
-                   options: {peer=patch-int}
-           Port "qr-0c3e55b0-a1"
-               tag: 2
-               Interface "qr-0c3e55b0-a1"
-                   type: internal
-           Port "tap584e33c5-5c"
-               tag: 1
-               Interface "tap584e33c5-5c"
-                   type: internal
-           Port "qr-515fae20-5e"
-               tag: 1
-               Interface "qr-515fae20-5e"
-                   type: internal
-           Port "tap9a32fe51-d3"
-               tag: 2
-               Interface "tap9a32fe51-d3"
-                   type: internal
            Port br-int
                Interface br-int
                    type: internal
-       Bridge br-tun
-           Port br-tun
-               Interface br-tun
-                   type: internal
-           Port patch-int
-               Interface patch-int
-                   type: patch
-                   options: {peer=patch-tun}
-           Port "gre-1"
-               Interface "gre-1"
-                   type: gre
-                   options: {in_key=flow, out_key=flow, remote_ip="10.20.20.53"}
        Bridge br-ex
-           Port "qg-c504b3d2-83"
-               Interface "qg-c504b3d2-83"
-                   type: internal
            Port "eth2"
                Interface "eth2"
-           Port "qg-90dbd778-40"
-               Interface "qg-90dbd778-40"
-                   type: internal
            Port br-ex
                Interface br-ex
                    type: internal
@@ -740,11 +712,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    #Under the OVS section
    [OVS]
    tenant_network_type = gre
+   enable_tunneling = True
    tunnel_id_ranges = 1:1000
    integration_bridge = br-int
    tunnel_bridge = br-tun
-   local_ip = 10.10.10.51
-   enable_tunneling = True
+   local_ip = 10.10.10.52
 
    #Firewall driver for realizing quantum security group function
    [SECURITYGROUP]
@@ -814,7 +786,6 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 * 重启quantum所有服务::
 
    cd /etc/init.d/; for i in $( ls quantum-* ); do sudo service $i restart; done
-   service dnsmasq restart
 
 4. 计算节点
 ================
@@ -880,6 +851,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    iface eth1 inet static
    address 10.20.20.53
    netmask 255.255.255.0
+
+* 开启路由转发
+
+   sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+   sysctl -p
 
 4.3. KVM
 ------------------
