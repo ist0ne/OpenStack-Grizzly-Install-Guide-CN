@@ -95,7 +95,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    service networking restart
 
-* 开启路由转发
+* 开启路由转发::
 
    sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
    sysctl -p
@@ -564,7 +564,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    address 192.168.100.52
    netmask 255.255.255.0
 
-* 开启路由转发
+* 开启路由转发::
 
    sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
    sysctl -p
@@ -852,7 +852,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    address 10.20.20.53
    netmask 255.255.255.0
 
-* 开启路由转发
+* 开启路由转发::
 
    sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
    sysctl -p
