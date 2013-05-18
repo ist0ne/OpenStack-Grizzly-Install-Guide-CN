@@ -1031,7 +1031,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | tenant_id                 | d2d70c131e86453f8296940da08bb574     |
    +---------------------------+--------------------------------------+
 
-# 为admin租户创建子网::
+* 为admin租户创建子网::
 
    # quantum subnet-create --tenant-id d2d70c131e86453f8296940da08bb574 net_admin 172.16.100.0/24
 
