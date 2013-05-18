@@ -7,8 +7,9 @@ OpenStack Grizzly安装指南
 
 ![ScreenShot](http://i.imgur.com/WdRDVZJ.png)
 
-Guide Branch  | Single/Multi Node | Quantum plugin  | Direct Guide Link                                                                                                                  |
-------------- | ----------------- | --------------- | ------------------                                                                                                                 |
-master        | Single            | Linux Bridge    | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/master/OpenStack_Grizzly_Install_Guide.rst                      |
-OVS_SingleNode| Single            | OpenVSwitch     | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/OVS_SingleNode/OpenStack_Grizzly_Install_Guide.rst |
-OVS_MutliNode | Multi             | OpenVSwitch     | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/OVS_MutliNode/OpenStack_Grizzly_Install_Guide.rst  |
+Guide Branch         | Single/Multi Node | Quantum plugin  | Direct Guide Link                                                                                                                  |
+-------------------- | ----------------- | --------------- | ------------------                                                                                                                 |
+master               | Single            | Linux Bridge    | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/master/OpenStack_Grizzly_Install_Guide.rst                                                   |
+OVS_SingleNode        | Single            | OpenVSwitch     | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/OVS_SingleNode/OpenStack_Grizzly_Install_Guide.rst        |
+OVS_MutliNode         | Multi             | OpenVSwitch     | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/OVS_MutliNode/OpenStack_Grizzly_Install_Guide.rst         |
+OVS_Quantum_MutliNode | Multi             | OpenVSwitch     | https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/blob/OVS_Quantum_MutliNode/OpenStack_Grizzly_Install_Guide.rst |
