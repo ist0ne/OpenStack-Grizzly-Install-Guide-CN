@@ -4,7 +4,7 @@
 
 :Version: 1.0
 :Source: https://github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN
-:Keywords: 单节点OpenStack安装, Grizzly, Quantum, Nova, Keystone, Glance, Horizon, Cinder, LinuxBridge, KVM, Ubuntu Server 12.04 (64 bits).
+:Keywords: 多点OpenStack安装, Grizzly, Quantum, Nova, Keystone, Glance, Horizon, Cinder, OpenVSwitch, KVM, Ubuntu Server 12.04 (64 bits).
 
 作者
 ==========
@@ -21,15 +21,12 @@
 ::
 
   0. 简介
-  1. 测试环境
-  2. 准备宿主机
-  3. 设置Keystone
-  4. 设置Glance
-  5. 设置Quantum
-  6. 设置Nova
-  7. 设置Cinder
-  8. 设置Horizon
-  9. 你的第一个VM
+  1. 环境搭建
+  2. 控制节点
+  3. 计算和网络节点
+  4. OpenStack使用
+  5. 参考文档
+
 
 0. 简介
 ==============
@@ -39,21 +36,21 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 状态: Stable
 
 
-1. 测试环境
+1. 环境搭建
 ====================
 
 :节点角色: NICs
-:单节点: eth0 (10.10.100.51), eth1 (192.168.100.51)
+:控制节点: eth0 (10.10.10.51), eth1 (192.168.100.51)
+:网络节点: eth0 (10.10.10.52), eth1 (10.20.20.52), eth2 (192.168.100.52)
+:计算节点: eth0 (10.10.10.53), eth1 (10.20.20.53)
 
-**注意1:** 多节点部署键OVS_MultiNode分支
+**注意1:** 你总是可以使用dpkg -s <packagename>确认你使用的是grizzly软件包(版本: 2013.1)
 
-**注意2:** 你总是可以使用dpkg -s <packagename>确认你使用的是grizzly软件包(版本: 2013.1)
+**注意2:** 这个是当前网络架构
 
-**注意3:** 这个是当前网络架构
+.. image:: http://i.imgur.com/Frsughe.jpg
 
-.. image:: http://i.imgur.com/JyMokiY.jpg
-
-2. 准备节点
+2. 控制节点
 ===============
 
 2.1. 准备Ubuntu
@@ -82,7 +79,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    #Not internet connected(used for OpenStack management)
    auto eth0
    iface eth0 inet static
-   address 10.10.100.51
+   address 10.10.10.51
    netmask 255.255.255.0
 
    #For Exposing OpenStack API over the internet
@@ -93,12 +90,16 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    gateway 192.168.100.1
    dns-nameservers 8.8.8.8
 
-
 * 重启网络服务::
 
    service networking restart
 
-2.3. 安装MySQL和RabbitMQ
+* 开启路由转发::
+
+   sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+   sysctl -p
+
+2.3. 安装MySQL
 ------------
 
 * 安装MySQL并为root用户设置密码::
@@ -110,6 +111,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
    service mysql restart
 
+2.4. 安装RabbitMQ和NTP
+------------
+
 * 安装RabbitMQ::
 
    apt-get install -y rabbitmq-server 
@@ -118,28 +122,45 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    apt-get install -y ntp
 
+2.5. 创建数据库
+------------
 
-3. 配置Keystone
-=============
+* 创建数据库::
+
+   mysql -u root -p
+   
+   #Keystone
+   CREATE DATABASE keystone;
+   GRANT ALL ON keystone.* TO 'keystoneUser'@'%' IDENTIFIED BY 'keystonePass';
+   
+   #Glance
+   CREATE DATABASE glance;
+   GRANT ALL ON glance.* TO 'glanceUser'@'%' IDENTIFIED BY 'glancePass';
+
+   #Quantum
+   CREATE DATABASE quantum;
+   GRANT ALL ON quantum.* TO 'quantumUser'@'%' IDENTIFIED BY 'quantumPass';
+
+   #Nova
+   CREATE DATABASE nova;
+   GRANT ALL ON nova.* TO 'novaUser'@'%' IDENTIFIED BY 'novaPass';      
+
+   #Cinder
+   CREATE DATABASE cinder;
+   GRANT ALL ON cinder.* TO 'cinderUser'@'%' IDENTIFIED BY 'cinderPass';
+
+   quit;
+
+2.6. 配置Keystone
+------------
 
 * 安装keystone软件包::
 
    apt-get install -y keystone
 
-* 确认keystone在运行::
-
-   service keystone status
-
-* 为keystone创建MySQL数据库::
-
-   mysql -u root -p
-   CREATE DATABASE keystone;
-   GRANT ALL ON keystone.* TO 'keystoneUser'@'%' IDENTIFIED BY 'keystonePass';
-   quit;
-
 * 在/etc/keystone/keystone.conf中设置连接到新创建的数据库::
 
-   connection = mysql://keystoneUser:keystonePass@10.10.100.51/keystone
+   connection = mysql://keystoneUser:keystonePass@10.10.10.51/keystone
 
 * 重启身份认证服务并同步数据库::
 
@@ -150,8 +171,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    #注意在执行脚本前请按你的网卡配置修改HOST_IP和HOST_IP_EXT
 
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/master/KeystoneScripts/keystone_basic.sh
-   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/master/KeystoneScripts/keystone_endpoints_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MutliNode/KeystoneScripts/keystone_basic.sh
+   wget https://raw.github.com/ist0ne/OpenStack-Grizzly-Install-Guide-CN/OVS_MutliNode/KeystoneScripts/keystone_endpoints_basic.sh
 
    chmod +x keystone_basic.sh
    chmod +x keystone_endpoints_basic.sh
@@ -176,31 +197,19 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    keystone user-list
 
-4. 设置Glance
-=============
+2.7. 设置Glance
+------------
 
 * 安装Glance::
 
    apt-get install -y glance
-
-* 确保glance服务在运行::
-
-   service glance-api status
-   service glance-registry status
-
-* 为Glance创建MySQL数据库::
-
-   mysql -u root -p
-   CREATE DATABASE glance;
-   GRANT ALL ON glance.* TO 'glanceUser'@'%' IDENTIFIED BY 'glancePass';
-   quit;
 
 * 按下面更新/etc/glance/glance-api-paste.ini::
 
    [filter:authtoken]
    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
    delay_auth_decision = true
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
@@ -211,7 +220,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    [filter:authtoken]
    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
@@ -220,7 +229,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 按下面更新/etc/glance/glance-api.conf::
 
-   sql_connection = mysql://glanceUser:glancePass@10.10.100.51/glance
+   sql_connection = mysql://glanceUser:glancePass@10.10.10.51/glance
 
 * 和::
 
@@ -229,7 +238,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    
 * 按下面更新/etc/glance/glance-registry.conf::
 
-   sql_connection = mysql://glanceUser:glancePass@10.10.100.51/glance
+   sql_connection = mysql://glanceUser:glancePass@10.10.10.51/glance
 
 * 和::
 
@@ -263,72 +272,44 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    glance image-list
 
-5. 设置Quantum
-=============
-
-5.2. Quantum-*
+2.8. 设置Quantum
 ------------
 
 * 安装Quantum组件::
 
-   apt-get install -y quantum-server quantum-plugin-linuxbridge quantum-plugin-linuxbridge-agent dnsmasq quantum-dhcp-agent quantum-l3-agent 
+   apt-get install -y quantum-server
 
-
-* 创建数据库::
-
-   mysql -u root -p
-   CREATE DATABASE quantum;
-   GRANT ALL ON quantum.* TO 'quantumUser'@'%' IDENTIFIED BY 'quantumPass';
-   quit; 
-
-* 确认Quantum组件在运行::
-
-   cd /etc/init.d/; for i in $( ls quantum-* ); do sudo service $i status; done
-   
 * 编辑/etc/quantum/api-paste.ini ::
 
    [filter:authtoken]
    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
    admin_user = quantum
    admin_password = service_pass
 
-* 编辑OVS配置文件/etc/quantum/plugins/linuxbridge/linuxbridge_conf.ini:: 
+* 编辑OVS配置文件/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini:: 
 
-   # under [DATABASE] section  
-   sql_connection = mysql://quantumUser:quantumPass@10.10.100.51/quantum
-   # under [LINUX_BRIDGE] section
-   physical_interface_mappings = physnet1:eth1
-   # under [VLANS] section
-   tenant_network_type = vlan
-   network_vlan_ranges = physnet1:1000:2999
+   #Under the database section
+   [DATABASE]
+   sql_connection = mysql://quantumUser:quantumPass@10.10.10.51/quantum
 
-* 更新/etc/quantum/metadata_agent.ini::
+   #Under the OVS section
+   [OVS]
+   tenant_network_type = gre
+   tunnel_id_ranges = 1:1000
+   enable_tunneling = True
 
-   # The Quantum user information for accessing the Quantum API.
-   auth_url = http://10.10.100.51:35357/v2.0
-   auth_region = RegionOne
-   admin_tenant_name = service
-   admin_user = quantum
-   admin_password = service_pass
-
-   # IP address used by Nova metadata server
-   nova_metadata_ip = 10.10.100.51
-
-   # TCP Port used by Nova metadata server
-   nova_metadata_port = 8775
-
-   metadata_proxy_shared_secret = helloOpenStack
+   #Firewall driver for realizing quantum security group function
+   [SECURITYGROUP]
+   firewall_driver = quantum.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
 
 * 编辑/etc/quantum/quantum.conf::
 
-   core_plugin = quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2
-
    [keystone_authtoken]
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
@@ -336,115 +317,22 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    admin_password = service_pass
    signing_dir = /var/lib/quantum/keystone-signing
 
-* 编辑/etc/quantum/l3_agent.ini::
-
-   [DEFAULT]
-   interface_driver = quantum.agent.linux.interface.BridgeInterfaceDriver
-   use_namespaces = True
-   external_network_bridge = br-ex
-   signing_dir = /var/cache/quantum
-   admin_tenant_name = service
-   admin_user = quantum
-   admin_password = service_pass
-   auth_url = http://10.10.100.51:35357/v2.0
-   l3_agent_manager = quantum.agent.l3_agent.L3NATAgentWithStateReport
-   root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
-
-* 编辑/etc/quantum/dhcp_agent.ini::
-
-   [DEFAULT]
-   interface_driver = quantum.agent.linux.interface.BridgeInterfaceDriver
-   dhcp_driver = quantum.agent.linux.dhcp.Dnsmasq
-   use_namespaces = True
-   signing_dir = /var/cache/quantum
-   admin_tenant_name = service
-   admin_user = quantum
-   admin_password = service_pass
-   auth_url = http://10.10.100.51:35357/v2.0
-   dhcp_agent_manager = quantum.agent.dhcp_agent.DhcpAgentWithStateReport
-   root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
-   state_path = /var/lib/quantum
-
 * 重启quantum所有服务::
 
    cd /etc/init.d/; for i in $( ls quantum-* ); do sudo service $i restart; done
-   service dnsmasq restart
 
-*注意: 如果有服务运行在53端口，'dnsmasq'重启失败。 你可以kill掉那个服务器后再重启'dnsmasq'
-
-6. 设置Nova
-===========
-
-6.1 KVM
-------------------
-
-* 确保你的硬件启用virtualization::
-
-   apt-get install cpu-checker
-   kvm-ok
-
-* 现在安装kvm并配置它::
-
-   apt-get install -y kvm libvirt-bin pm-utils
-
-* 在/etc/libvirt/qemu.conf配置文件中启用cgroup_device_acl数组::
-
-   cgroup_device_acl = [
-   "/dev/null", "/dev/full", "/dev/zero",
-   "/dev/random", "/dev/urandom",
-   "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
-   "/dev/rtc", "/dev/hpet","/dev/net/tun"
-   ]
-
-* 删除默认的虚拟网桥 ::
-
-   virsh net-destroy default
-   virsh net-undefine default
-
-* 更新/etc/libvirt/libvirtd.conf配置文件::
-
-   listen_tls = 0
-   listen_tcp = 1
-   auth_tcp = "none"
-
-* E编辑libvirtd_opts变量在/etc/init/libvirt-bin.conf配置文件中::
-
-   env libvirtd_opts="-d -l"
-
-* 编辑/etc/default/libvirt-bin文件 ::
-
-   libvirtd_opts="-d -l"
-
-* 重启libvirt服务使配置生效::
-
-   service libvirt-bin restart
-
-6.2 Nova-*
+2.9. 设置Nova
 ------------------
 
 * 安装nova组件::
 
-   apt-get install -y nova-api nova-cert novnc nova-consoleauth nova-scheduler nova-novncproxy nova-doc nova-conductor nova-compute-kvm
-
-   注意：如果你的宿主机不支持kvm虚拟化，可把nova-compute-kvm换成nova-compute-qemu
-   同时/etc/nova/nova-compute.conf配置文件中的libvirt_type=qemu
-
-* 检查nova服务是否正常启动::
-
-   cd /etc/init.d/; for i in $( ls nova-* ); do service $i status; cd; done
-
-* 为Nova创建Mysql数据库::
-
-   mysql -u root -p
-   CREATE DATABASE nova;
-   GRANT ALL ON nova.* TO 'novaUser'@'%' IDENTIFIED BY 'novaPass';
-   quit;
+   apt-get install -y nova-api nova-cert novnc nova-consoleauth nova-scheduler nova-novncproxy nova-doc nova-conductor
 
 * 在/etc/nova/api-paste.ini配置文件中修改认证信息::
 
    [filter:authtoken]
    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
@@ -456,16 +344,16 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
 * 如下修改/etc/nova/nova.conf::
 
-   [DEFAULT]
+   [DEFAULT] 
    logdir=/var/log/nova
    state_path=/var/lib/nova
    lock_path=/run/lock/nova
    verbose=True
    api_paste_config=/etc/nova/api-paste.ini
    compute_scheduler_driver=nova.scheduler.simple.SimpleScheduler
-   rabbit_host=10.10.100.51
-   nova_url=http://10.10.100.51:8774/v1.1/
-   sql_connection=mysql://novaUser:novaPass@10.10.100.51/nova
+   rabbit_host=10.10.10.51
+   nova_url=http://10.10.10.51:8774/v1.1/
+   sql_connection=mysql://novaUser:novaPass@10.10.10.51/nova
    root_helper=sudo nova-rootwrap /etc/nova/rootwrap.conf
 
    # Auth
@@ -473,47 +361,43 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    auth_strategy=keystone
 
    # Imaging service
-   glance_api_servers=10.10.100.51:9292
+   glance_api_servers=10.10.10.51:9292
    image_service=nova.image.glance.GlanceImageService
 
    # Vnc configuration
    novnc_enabled=true
    novncproxy_base_url=http://192.168.100.51:6080/vnc_auto.html
    novncproxy_port=6080
-   vncserver_proxyclient_address=10.10.100.51
+   vncserver_proxyclient_address=10.10.10.51
    vncserver_listen=0.0.0.0
-   
-   # Metadata
-   service_quantum_metadata_proxy = True
-   quantum_metadata_proxy_shared_secret = helloOpenStack
-   
+
    # Network settings
    network_api_class=nova.network.quantumv2.api.API
-   quantum_url=http://10.10.100.51:9696
+   quantum_url=http://10.10.10.51:9696
    quantum_auth_strategy=keystone
    quantum_admin_tenant_name=service
    quantum_admin_username=quantum
    quantum_admin_password=service_pass
-   quantum_admin_auth_url=http://10.10.100.51:35357/v2.0
-   libvirt_vif_driver=nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver
-   linuxnet_interface_driver=nova.network.linux_net.LinuxBridgeInterfaceDriver
-   firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
+   quantum_admin_auth_url=http://10.10.10.51:35357/v2.0
+   libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver
+   linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
+   #If you want Quantum + Nova Security groups
+   firewall_driver=nova.virt.firewall.NoopFirewallDriver
+   security_group_api=quantum
+   #If you want Nova Security groups only, comment the two lines above and uncomment line -1-.
+   #-1-firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
+
+   #Metadata
+   service_quantum_metadata_proxy = True
+   quantum_metadata_proxy_shared_secret = helloOpenStack
 
    # Compute #
    compute_driver=libvirt.LibvirtDriver
-  
+
    # Cinder #
    volume_api_class=nova.volume.cinder.API
    osapi_volume_listen_port=5900
-
-* 修改/etc/nova/nova-compute.conf::
-
-   [DEFAULT]
-   libvirt_type=kvm
-   compute_driver=libvirt.LibvirtDriver
-   libvirt_vif_type=ethernet
-   libvirt_vif_driver=nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver
-    
+ 
 * 同步数据库::
 
    nova-manage db sync
@@ -526,8 +410,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    nova-manage service list
 
-7. 设置Cinder
-===========
+2.10. 设置Cinder
+------------------
 
 * 安装软件包::
 
@@ -542,13 +426,6 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    service iscsitarget start
    service open-iscsi start
 
-* 为Cinder创建Mysql数据库::
-
-   mysql -u root -p
-   CREATE DATABASE cinder;
-   GRANT ALL ON cinder.* TO 'cinderUser'@'%' IDENTIFIED BY 'cinderPass';
-   quit;
-
 * 如下配置/etc/cinder/api-paste.ini::
 
    [filter:authtoken]
@@ -556,7 +433,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    service_protocol = http
    service_host = 192.168.100.51
    service_port = 5000
-   auth_host = 10.10.100.51
+   auth_host = 10.10.10.51
    auth_port = 35357
    auth_protocol = http
    admin_tenant_name = service
@@ -567,7 +444,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    [DEFAULT]
    rootwrap_config=/etc/cinder/rootwrap.conf
-   sql_connection = mysql://cinderUser:cinderPass@10.10.100.51/cinder
+   sql_connection = mysql://cinderUser:cinderPass@10.10.10.51/cinder
    api_paste_config = /etc/cinder/api-paste.ini
    iscsi_helper=ietadm
    volume_name_template = volume-%s
@@ -601,7 +478,8 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    vgcreate cinder-volumes /dev/loop2
 
 **注意:** 重启后卷组不会自动挂载 (点击`这个 <https://github.com/mseknibilel/OpenStack-Folsom-Install-guide/blob/master/Tricks%26Ideas/load_volume_group_after_system_reboot.rst>`_ 设置在重启后自动挂载) 
-重启cinder服务::
+
+* 重启cinder服务::
 
    cd /etc/init.d/; for i in $( ls cinder-* ); do sudo service $i restart; done
 
@@ -609,12 +487,12 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    cd /etc/init.d/; for i in $( ls cinder-* ); do sudo service $i status; done
 
-8. 设置Horizon
-===========
+2.11. 设置Horizon
+------------------
 
 * 如下安装horizon ::
 
-   apt-get install openstack-dashboard memcached
+   apt-get install -y openstack-dashboard memcached
 
 * 如果你不喜欢OpenStack ubuntu主题, 你可以停用它::
 
@@ -624,16 +502,474 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    service apache2 restart; service memcached restart
 
-现在你可以访问OpenStack **192.168.100.51/horizon** ，使用 **admin:admin_pass** 认证.
+3. 所有计算和网络节点
+================
 
-9. 创建虚拟机
+3.1. 准备节点
+-----------------
+
+* 安装好Ubuntu 12.04 Server 64bits后, 进入sudo模式直到完成本指南::
+
+   sudo su -
+
+* 添加Grizzly仓库::
+
+   apt-get install ubuntu-cloud-keyring python-software-properties software-properties-common python-keyring
+   echo deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/grizzly main >> /etc/apt/sources.list.d/grizzly.list
+
+* 升级系统::
+
+   apt-get update
+   apt-get upgrade
+   apt-get dist-upgrade
+
+* 安装ntp服务::
+
+   apt-get install -y ntp
+
+* 配置ntp服务从控制节点同步时间::
+
+   #Comment the ubuntu NTP servers
+   sed -i 's/server 0.ubuntu.pool.ntp.org/#server 0.ubuntu.pool.ntp.org/g' /etc/ntp.conf
+   sed -i 's/server 1.ubuntu.pool.ntp.org/#server 1.ubuntu.pool.ntp.org/g' /etc/ntp.conf
+   sed -i 's/server 2.ubuntu.pool.ntp.org/#server 2.ubuntu.pool.ntp.org/g' /etc/ntp.conf
+   sed -i 's/server 3.ubuntu.pool.ntp.org/#server 3.ubuntu.pool.ntp.org/g' /etc/ntp.conf
+   
+   #Set the network node to follow up your conroller node
+   sed -i 's/server ntp.ubuntu.com/server 10.10.10.51/g' /etc/ntp.conf
+
+   service ntp restart
+
+3.2. 配置网络
+-----------------
+
+* 计算节点1网卡如下设置::
+
+   # OpenStack management
+   auto eth0
+   iface eth0 inet static
+   address 10.10.10.52
+   netmask 255.255.255.0
+
+   # VM Configuration
+   auto eth1
+   iface eth1 inet static
+   address 10.20.20.52
+   netmask 255.255.255.0
+
+   # VM internet Access
+   auto eth2
+   iface eth2 inet static
+   address 192.168.100.52
+   netmask 255.255.255.0
+
+* 计算节点2网卡如下设置::
+
+   # OpenStack management
+   auto eth0
+   iface eth0 inet static
+   address 10.10.10.53
+   netmask 255.255.255.0
+
+   # VM Configuration
+   auto eth1
+   iface eth1 inet static
+   address 10.20.20.53
+   netmask 255.255.255.0
+
+   # VM internet Access
+   auto eth2
+   iface eth2 inet static
+   address 192.168.100.53
+   netmask 255.255.255.0
+
+* 开启路由转发::
+
+   sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+   sysctl -p
+
+
+3.3. OpenVSwitch
+------------
+
+* 安装OpenVSwitch软件包::
+
+   apt-get install -y openvswitch-controller openvswitch-switch openvswitch-brcompat
+
+* 修改openvswitch-switch配置文件::
+
+   sed -i 's/# BRCOMPAT=no/BRCOMPAT=yes/g' /etc/default/openvswitch-switch
+
+* 重启openvswitch-switch（注意ovs-brcompatd是否启动，如果未启动需要强制加载）::
+
+   /etc/init.d/openvswitch-switch restart
+
+* 如果有bridge module is loaded, not loading brcompat提示，需要先卸载bridge模块::
+
+   lsmod |grep bridge
+   rmmod bridge
+
+* 强制加载brcompat内核模块::
+
+   /etc/init.d/openvswitch-switch force-reload-kmod
+
+* 查看ovs-brcompatd、ovs-vswitchd、ovsdb-server是否均已启动::
+
+   /etc/init.d/openvswitch-switch restart
+
+* 查看brcompat内核模块已挂载::
+
+   lsmod | grep brcompat
+
+   brcompat               13513  0
+   openvswitch            84124  1 brcompat
+
+* 如果还是有问题执行下面步骤，直到ovs-brcompatd、ovs-vswitchd、ovsdb-server都启动::
+
+   root@openstack:~# apt-get install -y openvswitch-datapath-source
+   root@openstack:~# module-assistant auto-install openvswitch-datapath
+   root@openstack:~# /etc/init.d/openvswitch-switch force-reload-kmod
+   root@openstack:~# /etc/init.d/openvswitch-switch restart
+
+   文档参考：http://blog.scottlowe.org/2012/08/17/installing-kvm-and-open-vswitch-on-ubuntu/
+
+* 添加网桥 br-ex 并把网卡 eth1 加入 br-ex::
+
+   ovs-vsctl  add-br br-ex
+   ovs-vsctl add-port br-ex eth2
+
+* 如下编辑/etc/network/interfaces::
+
+   # This file describes the network interfaces available on your system
+   # and how to activate them. For more information, see interfaces(5).
+
+   # The loopback network interface
+   auto lo
+   iface lo inet loopback
+
+   # Not internet connected(used for OpenStack management)
+   # The primary network interface
+   auto eth0
+   iface eth0 inet static
+   # This is an autoconfigured IPv6 interface
+   # iface eth0 inet6 auto
+   address 10.10.10.52    # 计算节点2改为10.10.10.53
+   netmask 255.255.255.0
+
+   auto eth1
+   iface eth1 inet static
+   address 10.20.20.52    # 计算节点2改为10.10.10.53
+   netmask 255.255.255.0
+
+   #For Exposing OpenStack API over the internet
+   auto eth2
+   iface eth2 inet manual
+   up ifconfig $IFACE 0.0.0.0 up
+   up ip link set $IFACE promisc on
+   down ip link set $IFACE promisc off
+   down ifconfig $IFACE down
+
+   auto br-ex
+   iface br-ex inet static
+   address 192.168.100.52    # 计算节点2改为10.10.10.53
+   netmask 255.255.255.0
+   gateway 192.168.100.1
+   dns-nameservers 8.8.8.8
+
+* 重启网络服务::
+
+   /etc/init.d/networking restart
+
+* 创建内网网桥br-int::
+
+   ovs-vsctl add-br br-int
+
+* 查看网桥配置::
+
+   root@openstack-network:~# ovs-vsctl list-br
+   br-ex
+   br-int
+
+   root@openstack-network:~# ovs-vsctl show
+   ebea0b50-e450-41ea-babb-a094ca8d69fa
+       Bridge br-int
+           Port br-int
+               Interface br-int
+                   type: internal
+       Bridge br-ex
+           Port "eth2"
+               Interface "eth2"
+           Port br-ex
+               Interface br-ex
+                   type: internal
+       ovs_version: "1.4.0+build0"
+
+3.4. Quantum-*
+------------
+
+* 安装Quantum组件::
+
+   apt-get -y install quantum-plugin-openvswitch-agent quantum-dhcp-agent quantum-l3-agent quantum-metadata-agent
+
+* 编辑/etc/quantum/api-paste.ini ::
+
+   [filter:authtoken]
+   paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
+   auth_host = 10.10.10.51
+   auth_port = 35357
+   auth_protocol = http
+   admin_tenant_name = service
+   admin_user = quantum
+   admin_password = service_pass
+
+* 编辑OVS配置文件/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini:: 
+
+   #Under the database section
+   [DATABASE]
+   sql_connection = mysql://quantumUser:quantumPass@10.10.10.51/quantum
+
+   #Under the OVS section
+   [OVS]
+   tenant_network_type = gre
+   enable_tunneling = True
+   tunnel_id_ranges = 1:1000
+   integration_bridge = br-int
+   tunnel_bridge = br-tun
+   local_ip = 10.10.10.52    # 计算节点2改为10.10.10.53
+
+   #Firewall driver for realizing quantum security group function
+   [SECURITYGROUP]
+   firewall_driver = quantum.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+
+* 更新/etc/quantum/metadata_agent.ini::
+
+   # The Quantum user information for accessing the Quantum API.
+   auth_url = http://10.10.10.51:35357/v2.0
+   auth_region = RegionOne
+   admin_tenant_name = service
+   admin_user = quantum
+   admin_password = service_pass
+
+   # IP address used by Nova metadata server
+   nova_metadata_ip = 10.10.10.51
+
+   # TCP Port used by Nova metadata server
+   nova_metadata_port = 8775
+
+   metadata_proxy_shared_secret = helloOpenStack
+
+* 编辑/etc/quantum/quantum.conf::
+
+   # 确保RabbitMQ IP指向了控制节点
+   rabbit_host = 10.10.10.51
+
+   [keystone_authtoken]
+   auth_host = 10.10.10.51
+   auth_port = 35357
+   auth_protocol = http
+   admin_tenant_name = service
+   admin_user = quantum
+   admin_password = service_pass
+   signing_dir = /var/lib/quantum/keystone-signing
+
+* 编辑/etc/quantum/l3_agent.ini::
+
+   [DEFAULT]
+   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
+   use_namespaces = True
+   external_network_bridge = br-ex
+   signing_dir = /var/cache/quantum
+   admin_tenant_name = service
+   admin_user = quantum
+   admin_password = service_pass
+   auth_url = http://10.10.10.51:35357/v2.0
+   l3_agent_manager = quantum.agent.l3_agent.L3NATAgentWithStateReport
+   root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
+   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
+   enable_multi_host = True    # 开启多主机模式
+
+* 编辑/etc/quantum/dhcp_agent.ini::
+
+   [DEFAULT]
+   interface_driver = quantum.agent.linux.interface.OVSInterfaceDriver
+   dhcp_driver = quantum.agent.linux.dhcp.Dnsmasq
+   use_namespaces = True
+   signing_dir = /var/cache/quantum
+   admin_tenant_name = service
+   admin_user = quantum
+   admin_password = service_pass
+   auth_url = http://10.10.10.51:35357/v2.0
+   dhcp_agent_manager = quantum.agent.dhcp_agent.DhcpAgentWithStateReport
+   root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
+   state_path = /var/lib/quantum
+
+   enable_multi_host = True    # 开启多主机模式
+
+   # The DHCP server can assist with providing metadata support on isolated
+   # networks. Setting this value to True will cause the DHCP server to append
+   # specific host routes to the DHCP request.  The metadata service will only
+   # be activated when the subnet gateway_ip is None.  The guest instance must
+   # be configured to request host routes via DHCP (Option 121).
+   enable_isolated_metadata = False
+
+   # Allows for serving metadata requests coming from a dedicated metadata
+   # access network whose cidr is 169.254.169.254/16 (or larger prefix), and
+   # is connected to a Quantum router from which the VMs send metadata
+   # request. In this case DHCP Option 121 will not be injected in VMs, as
+   # they will be able to reach 169.254.169.254 through a router.
+   # This option requires enable_isolated_metadata = True
+   enable_metadata_network = False
+
+* 重启quantum所有服务::
+
+   cd /etc/init.d/; for i in $( ls quantum-* ); do sudo service $i restart; done
+
+3.5. KVM
+------------------
+
+* 确保你的硬件启用virtualization::
+
+   apt-get install cpu-checker
+   kvm-ok
+
+* 现在安装kvm并配置它::
+
+   apt-get install -y kvm libvirt-bin pm-utils
+
+* 在/etc/libvirt/qemu.conf配置文件中启用cgroup_device_acl数组::
+
+   cgroup_device_acl = [
+   "/dev/null", "/dev/full", "/dev/zero",
+   "/dev/random", "/dev/urandom",
+   "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
+   "/dev/rtc", "/dev/hpet","/dev/net/tun"
+   ]
+
+* 删除默认的虚拟网桥::
+
+   virsh net-destroy default
+   virsh net-undefine default
+
+* 更新/etc/libvirt/libvirtd.conf配置文件::
+
+   listen_tls = 0
+   listen_tcp = 1
+   auth_tcp = "none"
+
+* E编辑libvirtd_opts变量在/etc/init/libvirt-bin.conf配置文件中::
+
+   env libvirtd_opts="-d -l"
+
+* 编辑/etc/default/libvirt-bin文件 ::
+
+   libvirtd_opts="-d -l"
+
+* 重启libvirt服务使配置生效::
+
+   service libvirt-bin restart
+
+3.6. Nova
+------------------
+
+* 安装nova组件::
+
+   apt-get install -y nova-compute-kvm
+
+   注意：如果你的宿主机不支持kvm虚拟化，可把nova-compute-kvm换成nova-compute-qemu
+   同时/etc/nova/nova-compute.conf配置文件中的libvirt_type=qemu
+
+* 在/etc/nova/api-paste.ini配置文件中修改认证信息::
+
+   [filter:authtoken]
+   paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
+   auth_host = 10.10.10.51
+   auth_port = 35357
+   auth_protocol = http
+   admin_tenant_name = service
+   admin_user = nova
+   admin_password = service_pass
+   signing_dirname = /tmp/keystone-signing-nova
+   # Workaround for https://bugs.launchpad.net/nova/+bug/1154809
+   auth_version = v2.0
+
+* 如下修改/etc/nova/nova.conf::
+
+   [DEFAULT]
+   logdir=/var/log/nova
+   state_path=/var/lib/nova
+   lock_path=/run/lock/nova
+   verbose=True
+   api_paste_config=/etc/nova/api-paste.ini
+   compute_scheduler_driver=nova.scheduler.simple.SimpleScheduler
+   rabbit_host=10.10.10.51
+   nova_url=http://10.10.10.51:8774/v1.1/
+   sql_connection=mysql://novaUser:novaPass@10.10.10.51/nova
+   root_helper=sudo nova-rootwrap /etc/nova/rootwrap.conf
+
+   # Auth
+   use_deprecated_auth=false
+   auth_strategy=keystone
+
+   # Imaging service
+   glance_api_servers=10.10.10.51:9292
+   image_service=nova.image.glance.GlanceImageService
+
+   # Vnc configuration
+   novnc_enabled=true
+   novncproxy_base_url=http://192.168.100.51:6080/vnc_auto.html
+   novncproxy_port=6080
+   vncserver_proxyclient_address=10.10.10.52    # 计算节点二改为10.10.10.53
+   vncserver_listen=0.0.0.0
+   
+   # Metadata
+   service_quantum_metadata_proxy = True
+   quantum_metadata_proxy_shared_secret = helloOpenStack
+   
+   # Network settings
+   network_api_class=nova.network.quantumv2.api.API
+   quantum_url=http://10.10.10.51:9696
+   quantum_auth_strategy=keystone
+   quantum_admin_tenant_name=service
+   quantum_admin_username=quantum
+   quantum_admin_password=service_pass
+   quantum_admin_auth_url=http://10.10.10.51:35357/v2.0
+   libvirt_vif_driver=nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver
+   linuxnet_interface_driver=nova.network.linux_net.LinuxBridgeInterfaceDriver
+   firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
+
+   # Compute #
+   compute_driver=libvirt.LibvirtDriver
+  
+   # Cinder #
+   volume_api_class=nova.volume.cinder.API
+   osapi_volume_listen_port=5900
+
+* 修改/etc/nova/nova-compute.conf::
+
+   [DEFAULT]
+   libvirt_type=kvm
+   compute_driver=libvirt.LibvirtDriver
+   libvirt_ovs_bridge=br-int
+   libvirt_vif_type=ethernet
+   libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver
+   libvirt_use_virtio_for_bridges=True
+
+* 重启所有nova服务::
+
+   cd /etc/init.d/; for i in $( ls nova-* ); do sudo service $i restart; done   
+
+* 检查所有nova服务是否启动正常::
+
+   nova-manage service list
+
+4. OpenStack使用
 ================
 
 网络拓扑如下：
 
 .. image:: http://i.imgur.com/WdRDVZJ.png
 
-9.1. 为admin租户创建内网、外网、路由器和虚拟机
+5.1. 为admin租户创建内网、外网、路由器和虚拟机
 ------------------
 
 * 设置环境变量::
@@ -653,15 +989,15 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    # keystone user-list
 
-   +----------------------------------+---------+---------+------------------+
-   |                id                |   name  | enabled |      email       |
-   +----------------------------------+---------+---------+------------------+
-   | c815f963fef54f37b0ac84a6a7eca8b4 |  admin  |   True  |  admin@leju.com  |
-   | f30d6d67936e41869117b42e5403255c |  cinder |   True  | cinder@leju.com  |
-   | 5ec7e55586004aabb6a9ecc8247ba751 |  glance |   True  | glance@leju.com  |
-   | 197c373a254749f2b5cec7c91ef14c88 |   nova  |   True  |  nova@leju.com   |
-   | 8fec2c89a87d43f19c9e7d487001efa3 | quantum |   True  | quantum@leju.com |
-   +----------------------------------+---------+---------+------------------+
+   +----------------------------------+---------+---------+--------------------+
+   |                id                |   name  | enabled |       email        |
+   +----------------------------------+---------+---------+--------------------+
+   | 1ec119f9c8f14b8fa5cbe80395017462 |  admin  |   True  |  admin@domain.com  |
+   | 3c732419e41f401ab8b38ba4fd794c24 |  cinder |   True  | cinder@domain.com  |
+   | 1cce810d65d6498ea6a167e612e75bde |  glance |   True  | glance@domain.com  |
+   | 3cd285e00789485c87b34c0b039816f9 |   nova  |   True  |  nova@domain.com   |
+   | e65a97a59a5140f39787ae62d9fb42a7 | quantum |   True  | quantum@domain.com |
+   +----------------------------------+---------+---------+--------------------+
 
 * 列出已创建的租户::
 
@@ -670,20 +1006,20 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +----------------------------------+---------+---------+
    |                id                |   name  | enabled |
    +----------------------------------+---------+---------+
-   | 8c0104041b034df3a79c17a9517dd3f9 |  admin  |   True  |
-   | 2b376839187441c5888d35411e8ff8b0 | service |   True  |
+   | d2d70c131e86453f8296940da08bb574 |  admin  |   True  |
+   | 8a82c60ef6544e648c1cf7b19212c898 | service |   True  |
    +----------------------------------+---------+---------+
 
 * 为admin租户创建网络::
 
-   # quantum net-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 net_admin
+   # quantum net-create --tenant-id d2d70c131e86453f8296940da08bb574 net_admin
 
    Created a new network:
    +---------------------------+--------------------------------------+
    | Field                     | Value                                |
    +---------------------------+--------------------------------------+
    | admin_state_up            | True                                 |
-   | id                        | fed2d721-41d1-428f-b0a3-41ac8f7a51a1 |
+   | id                        | 99816d06-0ecf-4d1f-a2fa-e46924b477b6 |
    | name                      | net_admin                            |
    | provider:network_type     | gre                                  |
    | provider:physical_network |                                      |
@@ -692,12 +1028,12 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | shared                    | False                                |
    | status                    | ACTIVE                               |
    | subnets                   |                                      |
-   | tenant_id                 | 8c0104041b034df3a79c17a9517dd3f9     |
+   | tenant_id                 | d2d70c131e86453f8296940da08bb574     |
    +---------------------------+--------------------------------------+
 
 # 为admin租户创建子网::
 
-   # quantum subnet-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 net_admin 172.16.100.0/24
+   # quantum subnet-create --tenant-id d2d70c131e86453f8296940da08bb574 net_admin 172.16.100.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -709,16 +1045,16 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | enable_dhcp      | True                                               |
    | gateway_ip       | 172.16.100.1                                       |
    | host_routes      |                                                    |
-   | id               | fb141492-8aa1-437b-8192-315e19e7f4d2               |
+   | id               | 756f203f-8fd3-4074-9a12-1328cfbc41bf               |
    | ip_version       | 4                                                  |
    | name             |                                                    |
-   | network_id       | fed2d721-41d1-428f-b0a3-41ac8f7a51a1               |
-   | tenant_id        | 8c0104041b034df3a79c17a9517dd3f9                   |
+   | network_id       | 99816d06-0ecf-4d1f-a2fa-e46924b477b6               |
+   | tenant_id        | d2d70c131e86453f8296940da08bb574                   |
    +------------------+----------------------------------------------------+
 
 * 为admin租户创建路由器::
 
-   # quantum router-create --tenant-id 8c0104041b034df3a79c17a9517dd3f9 router_admin
+   # quantum router-create --tenant-id d2d70c131e86453f8296940da08bb574 router_admin
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -726,35 +1062,38 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +-----------------------+--------------------------------------+
    | admin_state_up        | True                                 |
    | external_gateway_info |                                      |
-   | id                    | 76d8ac10-a6df-4dfa-b691-297da374c811 |
+   | id                    | 813eb696-58e3-4721-b6b2-d7d1f946502c |
    | name                  | router_admin                         |
    | status                | ACTIVE                               |
-   | tenant_id             | 8c0104041b034df3a79c17a9517dd3f9     |
+   | tenant_id             | d2d70c131e86453f8296940da08bb574     |
    +-----------------------+--------------------------------------+
 
 * 列出路由代理类型::
 
    # quantum agent-list
 
-   +--------------------------------------+--------------------+-----------+-------+----------------+
-   | id                                   | agent_type         | host      | alive | admin_state_up |
-   +--------------------------------------+--------------------+-----------+-------+----------------+
-   | 2b68d118-c4bb-44a0-8387-678c5bdb1653 | L3 agent           | openstack | :-)   | True           |
-   | 7b42460c-cffd-494f-94b1-c6b4f3b5e102 | DHCP agent         | openstack | :-)   | True           |
-   | e443fbf2-398c-47ab-89d9-5d9907217379 | Open vSwitch agent | openstack | :-)   | True           |
-   +--------------------------------------+--------------------+-----------+-------+----------------+
+   +--------------------------------------+--------------------+----------+-------+----------------+
+   | id                                   | agent_type         | host     | alive | admin_state_up |
+   +--------------------------------------+--------------------+----------+-------+----------------+
+   | 03ad5d83-d089-4664-ba65-5d53970c5a1e | DHCP agent         | Compute1 | :-)   | True           |
+   | 071b8408-74fa-43bc-a3d4-68ab0d42796c | L3 agent           | Compute1 | :-)   | True           |
+   | 2be821e0-9629-4d9b-8b50-79e5237278ed | Open vSwitch agent | Compute1 | :-)   | True           |
+   | 5b8de451-0cbc-4637-9070-51b8e9a4b8d8 | L3 agent           | Compute2 | :-)   | True           |
+   | 883c97a0-ac6b-418c-8790-e80b6c177d70 | DHCP agent         | Compute2 | :-)   | True           |
+   | f353ea02-48a8-4eee-98b8-427a67888962 | Open vSwitch agent | Compute2 | :-)   | True           |
+   +--------------------------------------+--------------------+----------+-------+----------------+
 
-* 将router_admin设置为L3代理类型::
+* 将router_admin设置为L3代理类型（将router_admin与Compute1的L3代理关联）::
 
-   # quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_admin
+   # quantum quantum l3-agent-router-add 071b8408-74fa-43bc-a3d4-68ab0d42796c router_admin
 
    Added router router_admin to L3 agent
 
 * 将net_admin子网与router_admin路由关联::
 
-   # quantum router-interface-add 76d8ac10-a6df-4dfa-b691-297da374c811 fb141492-8aa1-437b-8192-315e19e7f4d2
+   # quantum router-interface-add 813eb696-58e3-4721-b6b2-d7d1f946502c 756f203f-8fd3-4074-9a12-1328cfbc41bf
 
-   Added interface to router 76d8ac10-a6df-4dfa-b691-297da374c811
+   Added interface to router 813eb696-58e3-4721-b6b2-d7d1f946502c
 
 * 创建外网net_external，注意设置--router:external=True::
 
@@ -765,7 +1104,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | Field                     | Value                                |
    +---------------------------+--------------------------------------+
    | admin_state_up            | True                                 |
-   | id                        | 7a7acad8-cabf-49f8-804f-ce6871d9cd63 |
+   | id                        | 750119bd-3246-4179-a4e9-bdfade8fb88a |
    | name                      | net_external                         |
    | provider:network_type     | gre                                  |
    | provider:physical_network |                                      |
@@ -774,7 +1113,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | shared                    | True                                 |
    | status                    | ACTIVE                               |
    | subnets                   |                                      |
-   | tenant_id                 | 8c0104041b034df3a79c17a9517dd3f9     |
+   | tenant_id                 | d2d70c131e86453f8296940da08bb574     |
    +---------------------------+--------------------------------------+
 
 * 为net_external创建子网，注意设置的gateway必须在给到的网段内::
@@ -791,11 +1130,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | enable_dhcp      | False                                                |
    | gateway_ip       | 192.168.100.1                                        |
    | host_routes      |                                                      |
-   | id               | 837ad514-3c05-4357-9a36-0b18adcfb354                 |
+   | id               | 53424a33-e685-469e-b529-eccf75504ba1                 |
    | ip_version       | 4                                                    |
    | name             |                                                      |
-   | network_id       | 7a7acad8-cabf-49f8-804f-ce6871d9cd63                 |
-   | tenant_id        | 8c0104041b034df3a79c17a9517dd3f9                     |
+   | network_id       | 750119bd-3246-4179-a4e9-bdfade8fb88a                 |
+   | tenant_id        | d2d70c131e86453f8296940da08bb574                     |
    +------------------+------------------------------------------------------+
 
 * 将net_external与router_admin路由器关联::
@@ -814,11 +1153,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +---------------------+--------------------------------------+
    | fixed_ip_address    |                                      |
    | floating_ip_address | 192.168.100.3                        |
-   | floating_network_id | 7a7acad8-cabf-49f8-804f-ce6871d9cd63 |
-   | id                  | 15bb69fa-972d-4e86-91fc-250dc1b20fe2 |
+   | floating_network_id | 750119bd-3246-4179-a4e9-bdfade8fb88a |
+   | id                  | c9904183-6b14-426f-8a23-c4269be933a5 |
    | port_id             |                                      |
    | router_id           |                                      |
-   | tenant_id           | 8c0104041b034df3a79c17a9517dd3f9     |
+   | tenant_id           | d2d70c131e86453f8296940da08bb574     |
    +---------------------+--------------------------------------+
 
    # quantum floatingip-create net_external
@@ -829,12 +1168,30 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +---------------------+--------------------------------------+
    | fixed_ip_address    |                                      |
    | floating_ip_address | 192.168.100.4                        |
-   | floating_network_id | 7a7acad8-cabf-49f8-804f-ce6871d9cd63 |
-   | id                  | 561e3530-d543-427f-986a-aaff64cb1a87 |
+   | floating_network_id | 750119bd-3246-4179-a4e9-bdfade8fb88a |
+   | id                  | 0be595f6-ef6f-4257-a3ee-c3b2e951a397 |
    | port_id             |                                      |
    | router_id           |                                      |
-   | tenant_id           | 8c0104041b034df3a79c17a9517dd3f9     |
+   | tenant_id           | d2d70c131e86453f8296940da08bb574     |
    +---------------------+--------------------------------------+
+
+* 运行虚拟机通过22端口被访问并能被ping通::
+
+   # nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+
+   +-------------+-----------+---------+-----------+--------------+
+   | IP Protocol | From Port | To Port | IP Range  | Source Group |
+   +-------------+-----------+---------+-----------+--------------+
+   | tcp         | 22        | 22      | 0.0.0.0/0 |              |
+   +-------------+-----------+---------+-----------+--------------+
+
+   # nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+
+   +-------------+-----------+---------+-----------+--------------+
+   | IP Protocol | From Port | To Port | IP Range  | Source Group |
+   +-------------+-----------+---------+-----------+--------------+
+   | icmp        | -1        | -1      | 0.0.0.0/0 |              |
+   +-------------+-----------+---------+-----------+--------------+
 
 * 为admin租户创建虚拟机并关联floating ip(可通过web界面创建虚拟机并关联floating ip)::
 
@@ -876,7 +1233,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +--------------------------------------+-----------------+--------+---------------------------------------+
 
 
-9.1. 创建leju.com租户、内网、路由器和虚拟机并关联外网
+5.2. 创建leju.com租户、内网、路由器和虚拟机并关联外网
 ------------------
 
 * 创建leju.com租户::
@@ -888,22 +1245,22 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +-------------+----------------------------------+
    | description |                                  |
    |   enabled   |               True               |
-   |      id     | 5585ffbad86d495d88b5f95729b1dc60 |
+   |      id     | f1ee07a9fdd740d78c71d6fa21537f9a |
    |     name    |             leju.com             |
    +-------------+----------------------------------+
 
 * 在leju.com租户中创建dongliang用户::
 
-   # keystone user-create --name=dongliang --pass=123456 --tenant-id=5585ffbad86d495d88b5f95729b1dc60 --email=dongliang@leju.com
+   # keystone user-create --name=dongliang --pass=123456 --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a --email=dongliang@leju.com
 
    +----------+----------------------------------+
    | Property |              Value               |
    +----------+----------------------------------+
    |  email   |        dongliang@leju.com        |
    | enabled  |               True               |
-   |    id    | 21efde97763147718fee478634cd3e70 |
+   |    id    | 149705e3e9db4cfbb4593e60cd3c3a82 |
    |   name   |            dongliang             |
-   | tenantId | 5585ffbad86d495d88b5f95729b1dc60 |
+   | tenantId | f1ee07a9fdd740d78c71d6fa21537f9a |
    +----------+----------------------------------+
 
 * 列出预定义的角色::
@@ -913,27 +1270,27 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +----------------------------------+----------------------+
    |                id                |         name         |
    +----------------------------------+----------------------+
-   | b90f2f8f84c4454f800f053dd5b6a54e |    KeystoneAdmin     |
-   | 0ba9be2eb2c145ffb90def5a75646ed2 | KeystoneServiceAdmin |
-   | b7e97eecf8cd4d6aa6f4091206ad6282 |        Member        |
+   | 1105a8ced2a54be1a9e69ef019963ba0 |    KeystoneAdmin     |
+   | 717df1c9ddb641f9b0fb9195a4453608 | KeystoneServiceAdmin |
+   | e651a0e1d19a4c87a2bbc0d3d14df4af |        Member        |
    | 9fe2ff9ee4384b1894a90878d3e92bab |       _member_       |
-   | 47eda7948e5d430bad3ce937fb00dc3b |        admin         |
+   | 64ee3ca0ff6a4e1c89cd73b2a8b15a32 |        admin         |
    +----------------------------------+----------------------+
 
 * 为用户dongliang添加角色::
 
-   # keystone user-role-add --tenant-id 5585ffbad86d495d88b5f95729b1dc60 --user-id 21efde97763147718fee478634cd3e70 --role-id 47eda7948e5d430bad3ce937fb00dc3b
+   # keystone user-role-add --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a --user-id 149705e3e9db4cfbb4593e60cd3c3a82 --role-id 64ee3ca0ff6a4e1c89cd73b2a8b15a32
 
 * 为leju.com租户创建网络::
 
-   # quantum net-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 net_leju_com
+   # quantum net-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_leju_com
 
    Created a new network:
    +---------------------------+--------------------------------------+
    | Field                     | Value                                |
    +---------------------------+--------------------------------------+
    | admin_state_up            | True                                 |
-   | id                        | 599e5a95-ff7f-49e5-9930-03e99e3a2d8d |
+   | id                        | bcb7cebf-bc0b-496c-94ed-1c7c96ae94fd |
    | name                      | net_leju_com                         |
    | provider:network_type     | gre                                  |
    | provider:physical_network |                                      |
@@ -942,12 +1299,12 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | shared                    | False                                |
    | status                    | ACTIVE                               |
    | subnets                   |                                      |
-   | tenant_id                 | 5585ffbad86d495d88b5f95729b1dc60     |
+   | tenant_id                 | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +---------------------------+--------------------------------------+
 
 * 为leju.com租户创建子网::
 
-   # quantum subnet-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 net_leju_com 172.16.200.0/24
+   # quantum subnet-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_leju_com 172.16.200.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -959,16 +1316,16 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | enable_dhcp      | True                                               |
    | gateway_ip       | 172.16.200.1                                       |
    | host_routes      |                                                    |
-   | id               | dbb59749-8f05-474d-b26d-745254a22669               |
+   | id               | b1085543-3a4f-4965-ade4-e3b06d89a285               |
    | ip_version       | 4                                                  |
    | name             |                                                    |
-   | network_id       | 599e5a95-ff7f-49e5-9930-03e99e3a2d8d               |
-   | tenant_id        | 5585ffbad86d495d88b5f95729b1dc60                   |
+   | network_id       | bcb7cebf-bc0b-496c-94ed-1c7c96ae94fd               |
+   | tenant_id        | f1ee07a9fdd740d78c71d6fa21537f9a                   |
    +------------------+----------------------------------------------------+
 
 * 为leju.com租户创建路由器::
 
-   # quantum router-create --tenant-id 5585ffbad86d495d88b5f95729b1dc60 router_leju_com
+   # quantum router-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a router_leju_com
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -976,41 +1333,44 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +-----------------------+--------------------------------------+
    | admin_state_up        | True                                 |
    | external_gateway_info |                                      |
-   | id                    | 451a6166-d082-4f02-8f37-07703a8118ab |
+   | id                    | 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 |
    | name                  | router_leju_com                      |
    | status                | ACTIVE                               |
-   | tenant_id             | 5585ffbad86d495d88b5f95729b1dc60     |
+   | tenant_id             | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +-----------------------+--------------------------------------+
 
 * 列出代理列表::
 
-   quantum agent-list
+   # quantum agent-list
 
-   +--------------------------------------+--------------------+-----------+-------+----------------+
-   | id                                   | agent_type         | host      | alive | admin_state_up |
-   +--------------------------------------+--------------------+-----------+-------+----------------+
-   | 2b68d118-c4bb-44a0-8387-678c5bdb1653 | L3 agent           | openstack | :-)   | True           |
-   | 7b42460c-cffd-494f-94b1-c6b4f3b5e102 | DHCP agent         | openstack | :-)   | True           |
-   | e443fbf2-398c-47ab-89d9-5d9907217379 | Open vSwitch agent | openstack | :-)   | True           |
-   +--------------------------------------+--------------------+-----------+-------+----------------+
+   +--------------------------------------+--------------------+----------+-------+----------------+
+   | id                                   | agent_type         | host     | alive | admin_state_up |
+   +--------------------------------------+--------------------+----------+-------+----------------+
+   | 03ad5d83-d089-4664-ba65-5d53970c5a1e | DHCP agent         | Compute1 | :-)   | True           |
+   | 071b8408-74fa-43bc-a3d4-68ab0d42796c | L3 agent           | Compute1 | :-)   | True           |
+   | 2be821e0-9629-4d9b-8b50-79e5237278ed | Open vSwitch agent | Compute1 | :-)   | True           |
+   | 5b8de451-0cbc-4637-9070-51b8e9a4b8d8 | L3 agent           | Compute2 | :-)   | True           |
+   | 883c97a0-ac6b-418c-8790-e80b6c177d70 | DHCP agent         | Compute2 | :-)   | True           |
+   | f353ea02-48a8-4eee-98b8-427a67888962 | Open vSwitch agent | Compute2 | :-)   | True           |
+   +--------------------------------------+--------------------+----------+-------+----------------+
 
-* 设置路由器使用L3代理::
+* 设置路由器使用L3代理(将router_leju_com与Compute2的L3代理相关联)::
 
-   # quantum l3-agent-router-add 2b68d118-c4bb-44a0-8387-678c5bdb1653 router_leju_com
+   # quantum l3-agent-router-add 5b8de451-0cbc-4637-9070-51b8e9a4b8d8 router_leju_com
 
    Added router router_leju_com to L3 agent
 
 * 连接net_leju_com到router_leju_com::
 
-   # quantum router-interface-add 451a6166-d082-4f02-8f37-07703a8118ab dbb59749-8f05-474d-b26d-745254a22669
+   # quantum router-interface-add 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 b1085543-3a4f-4965-ade4-e3b06d89a285
 
-   Added interface to router 451a6166-d082-4f02-8f37-07703a8118ab
+   Added interface to router 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389
 
 * 设置net_leju_com外网网关::
 
-   # quantum router-gateway-set 451a6166-d082-4f02-8f37-07703a8118ab net_external
+   # quantum router-gateway-set  9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 net_external
 
-   Set gateway for router 451a6166-d082-4f02-8f37-07703a8118ab
+   Set gateway for router 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389
 
 * 设置leju.com租户环境变量::
 
@@ -1044,7 +1404,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
    | id                                   | name | mac_address       | fixed_ips                                                                           |
    +--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
-   | d0195246-5863-4ede-ac40-3cc06516279e |      | fa:16:3e:0c:f2:01 | {"subnet_id": "dbb59749-8f05-474d-b26d-745254a22669", "ip_address": "172.16.200.2"} |
+   | d0195246-5863-4ede-ac40-3cc06516279e |      | fa:16:3e:0c:f2:01 | {"subnet_id": "b1085543-3a4f-4965-ade4-e3b06d89a285", "ip_address": "172.16.200.2"} |
    +--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
 
 * 为vm.leju.com创建floating ip::
@@ -1057,11 +1417,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +---------------------+--------------------------------------+
    | fixed_ip_address    |                                      |
    | floating_ip_address | 192.168.100.8                        |
-   | floating_network_id | 7a7acad8-cabf-49f8-804f-ce6871d9cd63 |
+   | floating_network_id | b1085543-3a4f-4965-ade4-e3b06d89a285 |
    | id                  | 2efa6e49-9d99-4402-9a61-85c235d0ccb8 |
    | port_id             |                                      |
    | router_id           |                                      |
-   | tenant_id           | 5585ffbad86d495d88b5f95729b1dc60     |
+   | tenant_id           | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +---------------------+--------------------------------------+
 
 * 将新创建的floating ip与vm.leju.com关联::
@@ -1070,6 +1430,11 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    Associated floatingip 2efa6e49-9d99-4402-9a61-85c235d0ccb8
 
+6. 参考文档
+================
 
+`Boostrapping Open vSwitch and Quantum <https://a248.e.akamai.net/cdn.hpcloudsvc.com/h9f25be84b35c201beea6b13c85876258/prodaw2/Bootstrapping_OVS_Quantum--final_20130319.html>`_
+
+`Cisco OpenStack Edition: Folsom Manual Install <http://docwiki.cisco.com/wiki/Cisco_OpenStack_Edition:_Folsom_Manual_Install>`_
 
 
