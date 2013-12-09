@@ -340,15 +340,6 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    [DEFAULT]
    interface_driver = quantum.agent.linux.interface.BridgeInterfaceDriver
-   use_namespaces = True
-   external_network_bridge = br-ex
-   signing_dir = /var/cache/quantum
-   admin_tenant_name = service
-   admin_user = quantum
-   admin_password = service_pass
-   auth_url = http://10.10.100.51:35357/v2.0
-   l3_agent_manager = quantum.agent.l3_agent.L3NATAgentWithStateReport
-   root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
 
 * 编辑/etc/quantum/dhcp_agent.ini::
 
