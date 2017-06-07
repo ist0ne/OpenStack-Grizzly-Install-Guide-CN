@@ -1233,12 +1233,12 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +--------------------------------------+-----------------+--------+---------------------------------------+
 
 
-5.2. 创建leju.com租户、内网、路由器和虚拟机并关联外网
+5.2. 创建domain.com租户、内网、路由器和虚拟机并关联外网
 ------------------
 
-* 创建leju.com租户::
+* 创建domain.com租户::
 
-   # keystone tenant-create --name leju.com
+   # keystone tenant-create --name domain.com
 
    +-------------+----------------------------------+
    |   Property  |              Value               |
@@ -1246,17 +1246,17 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | description |                                  |
    |   enabled   |               True               |
    |      id     | f1ee07a9fdd740d78c71d6fa21537f9a |
-   |     name    |             leju.com             |
+   |     name    |             domain.com             |
    +-------------+----------------------------------+
 
-* 在leju.com租户中创建dongliang用户::
+* 在domain.com租户中创建dongliang用户::
 
-   # keystone user-create --name=dongliang --pass=123456 --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a --email=dongliang@leju.com
+   # keystone user-create --name=dongliang --pass=123456 --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a --email=dongliang@domain.com
 
    +----------+----------------------------------+
    | Property |              Value               |
    +----------+----------------------------------+
-   |  email   |        dongliang@leju.com        |
+   |  email   |        dongliang@domain.com        |
    | enabled  |               True               |
    |    id    | 149705e3e9db4cfbb4593e60cd3c3a82 |
    |   name   |            dongliang             |
@@ -1281,9 +1281,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
 
    # keystone user-role-add --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a --user-id 149705e3e9db4cfbb4593e60cd3c3a82 --role-id 64ee3ca0ff6a4e1c89cd73b2a8b15a32
 
-* 为leju.com租户创建网络::
+* 为domain.com租户创建网络::
 
-   # quantum net-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_leju_com
+   # quantum net-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_domain_com
 
    Created a new network:
    +---------------------------+--------------------------------------+
@@ -1291,7 +1291,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +---------------------------+--------------------------------------+
    | admin_state_up            | True                                 |
    | id                        | bcb7cebf-bc0b-496c-94ed-1c7c96ae94fd |
-   | name                      | net_leju_com                         |
+   | name                      | net_domain_com                         |
    | provider:network_type     | gre                                  |
    | provider:physical_network |                                      |
    | provider:segmentation_id  | 3                                    |
@@ -1302,9 +1302,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | tenant_id                 | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +---------------------------+--------------------------------------+
 
-* 为leju.com租户创建子网::
+* 为domain.com租户创建子网::
 
-   # quantum subnet-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_leju_com 172.16.200.0/24
+   # quantum subnet-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a net_domain_com 172.16.200.0/24
 
    Created a new subnet:
    +------------------+----------------------------------------------------+
@@ -1323,9 +1323,9 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | tenant_id        | f1ee07a9fdd740d78c71d6fa21537f9a                   |
    +------------------+----------------------------------------------------+
 
-* 为leju.com租户创建路由器::
+* 为domain.com租户创建路由器::
 
-   # quantum router-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a router_leju_com
+   # quantum router-create --tenant-id f1ee07a9fdd740d78c71d6fa21537f9a router_domain_com
 
    Created a new router:
    +-----------------------+--------------------------------------+
@@ -1334,7 +1334,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | admin_state_up        | True                                 |
    | external_gateway_info |                                      |
    | id                    | 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 |
-   | name                  | router_leju_com                      |
+   | name                  | router_domain_com                      |
    | status                | ACTIVE                               |
    | tenant_id             | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +-----------------------+--------------------------------------+
@@ -1354,34 +1354,34 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | f353ea02-48a8-4eee-98b8-427a67888962 | Open vSwitch agent | Compute2 | :-)   | True           |
    +--------------------------------------+--------------------+----------+-------+----------------+
 
-* 设置路由器使用L3代理(将router_leju_com与Compute2的L3代理相关联)::
+* 设置路由器使用L3代理(将router_domain_com与Compute2的L3代理相关联)::
 
-   # quantum l3-agent-router-add 5b8de451-0cbc-4637-9070-51b8e9a4b8d8 router_leju_com
+   # quantum l3-agent-router-add 5b8de451-0cbc-4637-9070-51b8e9a4b8d8 router_domain_com
 
-   Added router router_leju_com to L3 agent
+   Added router router_domain_com to L3 agent
 
-* 连接net_leju_com到router_leju_com::
+* 连接net_domain_com到router_domain_com::
 
    # quantum router-interface-add 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 b1085543-3a4f-4965-ade4-e3b06d89a285
 
    Added interface to router 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389
 
-* 设置net_leju_com外网网关::
+* 设置net_domain_com外网网关::
 
    # quantum router-gateway-set  9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389 net_external
 
    Set gateway for router 9b8ee7f4-a3b4-41e2-a28e-4feca3ba1389
 
-* 设置leju.com租户环境变量::
+* 设置domain.com租户环境变量::
 
    # cat creds-dongliang
 
-   export OS_TENANT_NAME=leju.com
+   export OS_TENANT_NAME=domain.com
    export OS_USERNAME=dongliang
    export OS_PASSWORD=123456
    export OS_AUTH_URL="http://192.168.100.51:5000/v2.0/"
 
-* 用dongliang用户登陆web界面，创建虚拟主机vm.leju.com
+* 用dongliang用户登陆web界面，创建虚拟主机vm.domain.com
 
 * 使变量生效::
 
@@ -1394,10 +1394,10 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    +--------------------------------------+-------------+--------+---------------------------+
    | ID                                   | Name        | Status | Networks                  |
    +--------------------------------------+-------------+--------+---------------------------+
-   | eefc20a9-251c-44de-99ee-179463cb7aca | vm.leju.com | ACTIVE | net_leju_com=172.16.200.2 |
+   | eefc20a9-251c-44de-99ee-179463cb7aca | vm.domain.com | ACTIVE | net_domain_com=172.16.200.2 |
    +--------------------------------------+-------------+--------+---------------------------+
 
-* 列出vm.leju.com虚拟机的端口::
+* 列出vm.domain.com虚拟机的端口::
 
    # quantum port-list -- --device_id eefc20a9-251c-44de-99ee-179463cb7aca
 
@@ -1407,7 +1407,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | d0195246-5863-4ede-ac40-3cc06516279e |      | fa:16:3e:0c:f2:01 | {"subnet_id": "b1085543-3a4f-4965-ade4-e3b06d89a285", "ip_address": "172.16.200.2"} |
    +--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
 
-* 为vm.leju.com创建floating ip::
+* 为vm.domain.com创建floating ip::
 
    # quantum floatingip-create net_external
 
@@ -1424,7 +1424,7 @@ OpenStack Grizzly安装指南旨在让你轻松创建自己的OpenStack云平台
    | tenant_id           | f1ee07a9fdd740d78c71d6fa21537f9a     |
    +---------------------+--------------------------------------+
 
-* 将新创建的floating ip与vm.leju.com关联::
+* 将新创建的floating ip与vm.domain.com关联::
 
    # quantum floatingip-associate 2efa6e49-9d99-4402-9a61-85c235d0ccb8 d0195246-5863-4ede-ac40-3cc06516279e
 
